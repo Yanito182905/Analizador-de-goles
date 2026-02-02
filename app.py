@@ -14,7 +14,15 @@ API_KEY = "f34c526a0810519b034fe7555fb83977"
 TELEGRAM_TOKEN = "8175001255:AAHNbEPITCntbvN4xqvxc-xz9PlZZ6N9NYQ"
 TELEGRAM_CHAT_ID = "790743691"
 HEADERS = {'x-rapidapi-host': "v3.football.api-sports.io", 'x-rapidapi-key': API_KEY}
-
+# BOTÓN DE PRUEBA RÁPIDA
+if st.button('🔔 Probar Conexión a Telegram'):
+    url_test = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    payload_test = {"chat_id": TELEGRAM_CHAT_ID, "text": "✅ ¡Conexión Exitosa! Tu sistema 6% está listo."}
+    response = requests.post(url_test, data=payload_test)
+    if response.status_code == 200:
+        st.success("¡Mensaje de prueba enviado! Revisa tu Telegram.")
+    else:
+        st.error(f"Error: {response.status_code}. Revisa que el Token e ID sean correctos.")
 # --- ESTILO ---
 st.markdown("""
     <style>
@@ -97,4 +105,5 @@ if st.button('🚀 Escanear Ligas TOP y Enviar a Telegram'):
 
 st.markdown("---")
 st.caption("Estrategia 6% - Generada para uso personal. No compartas tu Token.")
+
 
