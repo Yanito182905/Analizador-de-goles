@@ -9,7 +9,7 @@ st.set_page_config(page_title="App 6% - Alertas Pro", page_icon="📲", layout="
 
 # CREDENCIALES
 API_KEY = "f34c526a0810519b034fe7555fb83977"
-TELEGRAM_TOKEN =8175001255:AAHNbEPITCntbvN4xqvxc-xz9PlZZ6N9NYQ "PEGA_AQUI_TU_TOKEN_DE_BOTFATHER"
+TELEGRAM_TOKEN =8175001255:AAHNbEPITCntbvN4xqvxc-xz9PlZZ6N9NYQ"PEGA_AQUI_TU_TOKEN_DE_BOTFATHER"
 TELEGRAM_CHAT_ID =790743691 "PEGA_AQUI_TU_CHAT_ID"
 
 HEADERS = {'x-rapidapi-host': "v3.football.api-sports.io", 'x-rapidapi-key': API_KEY}
@@ -56,4 +56,5 @@ st.markdown("---")
 st.subheader("📊 Tu proyección de crecimiento")
 banca = st.sidebar.number_input("Banca Actual ($)", value=1000.0)
 st.write(f"Tu meta de hoy es ganar: **${banca * 0.06:.2f}**")
+
 
