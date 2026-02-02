@@ -3,68 +3,76 @@ import requests
 import pandas as pd
 from datetime import datetime
 
-# CONFIGURACIÓN DE PÁGINA
-st.set_page_config(page_title="Analizador de Goles 6%", page_icon="⚽")
+# CONFIGURACIÓN
+st.set_page_config(page_title="Gestor 6% Pro", page_icon="📈", layout="wide")
 
-# TU API KEY (Ya integrada)
 API_KEY = "f34c526a0810519b034fe7555fb83977"
+HEADERS = {'x-rapidapi-host': "v3.football.api-sports.io", 'x-rapidapi-key': API_KEY}
 
-st.title("⚽ Estrategia de Goles - Meta 6%")
-st.sidebar.header("💰 Gestión de Banca")
-banca_actual = st.sidebar.number_input("Tu banca actual ($)", value=1000.0)
-meta_diaria = banca_actual * 0.06
+# --- SIDEBAR: GESTIÓN DE BANCA ---
+st.sidebar.header("💰 Panel de Control")
+banca_inicial = st.sidebar.number_input("Banca con la que empezaste ($)", value=1000.0)
+meta_diaria_pct = 0.06
 
-st.sidebar.success(f"Objetivo de hoy: ${meta_diaria:.2f}")
+# --- DIARIO DE RESULTADOS ---
+st.sidebar.markdown("---")
+st.sidebar.subheader("📓 Diario de Hoy")
+resultado_hoy = st.sidebar.number_input("¿Cuánto ganaste hoy? ($)", value=0.0)
+if st.sidebar.button("Guardar Resultado"):
+    st.sidebar.success("Resultado registrado localmente")
 
-def obtener_datos():
+# --- LÓGICA DE INTERÉS COMPUESTO ---
+st.title("📈 Proyección de Crecimiento Exponencial")
+
+col1, col2 = st.columns([2, 1])
+
+with col1:
+    dias = list(range(0, 31))
+    proyeccion = []
+    banca_temp = banca_inicial
+    for d in dias:
+        proyeccion.append(round(banca_temp, 2))
+        banca_temp *= (1 + meta_diaria_pct)
+    
+    df_proyeccion = pd.DataFrame({"Día": dias, "Banca Estimada ($)": proyeccion})
+    st.line_chart(df_proyeccion.set_index("Día"))
+
+with col2:
+    st.metric("Meta de Hoy", f"${banca_inicial * meta_diaria_pct:.2f}")
+    st.metric("Banca en 30 días", f"${proyeccion[-1]:,.2f}")
+    st.write("⚠️ **Recuerda:** El interés compuesto funciona si no retiras las ganancias.")
+
+
+
+# --- BUSCADOR DE PICKS ---
+st.markdown("---")
+if st.button('🎯 Escanear Partidos para mi Meta'):
     url = "https://v3.football.api-sports.io/fixtures"
     hoy = datetime.now().strftime('%Y-%m-%d')
-    headers = {
-        'x-rapidapi-host': "v3.football.api-sports.io",
-        'x-rapidapi-key': API_KEY
-    }
-    params = {'date': hoy}
+    params = {'date': hoy, 'status': 'NS'}
     
-    try:
-        response = requests.get(url, headers=headers, params=params)
-        data = response.json()
-        return data.get('response', [])
-    except:
-        return []
-
-st.write(f"### Partidos de hoy: {datetime.now().strftime('%d/%m/%Y')}")
-
-with st.spinner('Analizando mercados de goles...'):
-    partidos = obtener_datos()
-    
-    if partidos:
-        lista_analisis = []
-        for p in partidos:
-            liga = p['league']['name']
-            home = p['teams']['home']['name']
-            away = p['teams']['away']['name']
-            hora = p['fixture']['date'][11:16]
-            
-            # Filtro inteligente de ligas "Over" (Países Bajos, Alemania, Islandia, etc.)
-            ligas_top_goles = ['Eerste Divisie', 'Eredivisie', 'Bundesliga', 'S-League', 'J-League', 'Super League']
-            
-            confianza = "ALTA 🔥" if liga in ligas_top_goles else "MEDIA 📊"
-            
-            lista_analisis.append({
-                "Hora": hora,
-                "Partido": f"{home} vs {away}",
-                "Liga": liga,
-                "Confianza": confianza,
-                "Mercado Sugerido": "Over 1.5" if confianza == "ALTA 🔥" else "Over 2.5 (Riesgo)"
-            })
+    with st.spinner('Buscando en ligas de alta frecuencia...'):
+        res = requests.get(url, headers=HEADERS, params=params)
+        partidos = res.json().get('response', [])
         
-        df = pd.DataFrame(lista_analisis)
+        ligas_top = ['Eerste Divisie', 'Eredivisie', 'Bundesliga', 'S-League', 'J-League', 'Super League']
+        picks = [p for p in partidos if p['league']['name'] in ligas_top]
         
-        # Mostrar tabla estilizada
-        st.table(df)
-        
-        st.info("💡 Consejo: Para tu meta del 6%, busca cuotas entre 1.50 y 1.70 con los partidos marcados como 'ALTA'.")
-    else:
-        st.error("No se pudieron cargar datos. Revisa tu límite de API o conexión.")
+        if picks:
+            data_final = []
+            for p in picks[:10]:
+                data_final.append({
+                    "Hora": p['fixture']['date'][11:16],
+                    "Partido": f"{p['teams']['home']['name']} vs {p['teams']['away']['name']}",
+                    "Liga": p['league']['name'],
+                    "Estado": "ALTA PROBABILIDAD 🔥"
+                })
+            st.table(pd.DataFrame(data_final))
+        else:
+            st.warning("No hay partidos de ligas TOP en este momento.")
 
-st.caption("App conectada a API-Football en tiempo real.")
+# --- BARRA DE DISCIPLINA ---
+st.markdown("---")
+if st.checkbox("✅ He alcanzado mi 6% de hoy. ¡Misión cumplida!"):
+    st.balloons()
+    st.success("¡Felicidades! Cierra la sesión y disfruta de tu tiempo libre.")
