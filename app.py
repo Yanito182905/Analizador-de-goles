@@ -1,78 +1,58 @@
+
 import streamlit as st
 import requests
 import pandas as pd
 from datetime import datetime
 
 # CONFIGURACIÓN
-st.set_page_config(page_title="Gestor 6% Pro", page_icon="📈", layout="wide")
+st.set_page_config(page_title="App 6% - Alertas Pro", page_icon="📲", layout="wide")
 
+# CREDENCIALES
 API_KEY = "f34c526a0810519b034fe7555fb83977"
+TELEGRAM_TOKEN = "PEGA_AQUI_TU_TOKEN_DE_BOTFATHER"
+TELEGRAM_CHAT_ID = "PEGA_AQUI_TU_CHAT_ID"
+
 HEADERS = {'x-rapidapi-host': "v3.football.api-sports.io", 'x-rapidapi-key': API_KEY}
 
-# --- SIDEBAR: GESTIÓN DE BANCA ---
-st.sidebar.header("💰 Panel de Control")
-banca_inicial = st.sidebar.number_input("Banca con la que empezaste ($)", value=1000.0)
-meta_diaria_pct = 0.06
+def enviar_telegram(mensaje):
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "Markdown"}
+    requests.post(url, data=payload)
 
-# --- DIARIO DE RESULTADOS ---
-st.sidebar.markdown("---")
-st.sidebar.subheader("📓 Diario de Hoy")
-resultado_hoy = st.sidebar.number_input("¿Cuánto ganaste hoy? ($)", value=0.0)
-if st.sidebar.button("Guardar Resultado"):
-    st.sidebar.success("Resultado registrado localmente")
+st.title("📲 Alertas Inteligentes - Meta 6%")
 
-# --- LÓGICA DE INTERÉS COMPUESTO ---
-st.title("📈 Proyección de Crecimiento Exponencial")
-
-col1, col2 = st.columns([2, 1])
-
-with col1:
-    dias = list(range(0, 31))
-    proyeccion = []
-    banca_temp = banca_inicial
-    for d in dias:
-        proyeccion.append(round(banca_temp, 2))
-        banca_temp *= (1 + meta_diaria_pct)
-    
-    df_proyeccion = pd.DataFrame({"Día": dias, "Banca Estimada ($)": proyeccion})
-    st.line_chart(df_proyeccion.set_index("Día"))
-
-with col2:
-    st.metric("Meta de Hoy", f"${banca_inicial * meta_diaria_pct:.2f}")
-    st.metric("Banca en 30 días", f"${proyeccion[-1]:,.2f}")
-    st.write("⚠️ **Recuerda:** El interés compuesto funciona si no retiras las ganancias.")
-
-
-
-# --- BUSCADOR DE PICKS ---
-st.markdown("---")
-if st.button('🎯 Escanear Partidos para mi Meta'):
-    url = "https://v3.football.api-sports.io/fixtures"
+# --- BUSCADOR ---
+if st.button('🔍 Escanear y Enviar Alertas al Móvil'):
+    url_fixtures = "https://v3.football.api-sports.io/fixtures"
     hoy = datetime.now().strftime('%Y-%m-%d')
     params = {'date': hoy, 'status': 'NS'}
     
-    with st.spinner('Buscando en ligas de alta frecuencia...'):
-        res = requests.get(url, headers=HEADERS, params=params)
+    with st.spinner('Escaneando mercado de goles...'):
+        res = requests.get(url_fixtures, headers=HEADERS, params=params)
         partidos = res.json().get('response', [])
         
-        ligas_top = ['Eerste Divisie', 'Eredivisie', 'Bundesliga', 'S-League', 'J-League', 'Super League']
-        picks = [p for p in partidos if p['league']['name'] in ligas_top]
-        
-        if picks:
-            data_final = []
-            for p in picks[:10]:
-                data_final.append({
-                    "Hora": p['fixture']['date'][11:16],
-                    "Partido": f"{p['teams']['home']['name']} vs {p['teams']['away']['name']}",
-                    "Liga": p['league']['name'],
-                    "Estado": "ALTA PROBABILIDAD 🔥"
-                })
-            st.table(pd.DataFrame(data_final))
-        else:
-            st.warning("No hay partidos de ligas TOP en este momento.")
+        ligas_goleadoras = ['Eerste Divisie', 'Eredivisie', 'Bundesliga', 'S-League', 'J-League', 'Super League']
+        picks_encontrados = []
 
-# --- BARRA DE DISCIPLINA ---
+        for p in partidos:
+            liga_nombre = p['league']['name']
+            if liga_nombre in ligas_goleadoras:
+                home = p['teams']['home']['name']
+                away = p['teams']['away']['name']
+                hora = p['fixture']['date'][11:16]
+                
+                msg = f"⚽ *NUEVA OPORTUNIDAD 6%*\n\n🔥 {home} vs {away}\n🏆 Liga: {liga_nombre}\n⏰ Hora: {hora}\n📈 Mercado: Over 1.5"
+                enviar_telegram(msg)
+                picks_encontrados.append({"Partido": f"{home} vs {away}", "Liga": liga_nombre})
+
+        if picks_encontrados:
+            st.success(f"¡Se han enviado {len(picks_encontrados)} alertas a tu Telegram!")
+            st.table(pd.DataFrame(picks_encontrados))
+        else:
+            st.warning("No se encontraron partidos 'TOP' en este momento.")
+
+# --- TU CALCULADORA DE INTERÉS COMPUESTO (Mantener debajo) ---
 st.markdown("---")
-if st.checkbox("✅ He alcanzado mi 6% de hoy. ¡Misión cumplida!"):
-    st.balloons()
-    st.success("¡Felicidades! Cierra la sesión y disfruta de tu tiempo libre.")
+st.subheader("📊 Tu proyección de crecimiento")
+banca = st.sidebar.number_input("Banca Actual ($)", value=1000.0)
+st.write(f"Tu meta de hoy es ganar: **${banca * 0.06:.2f}**")
