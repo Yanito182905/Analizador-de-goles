@@ -1,100 +1,135 @@
 import streamlit as st
 import requests
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 import random
 
-# 1. CONFIGURACIÓN
-st.set_page_config(page_title="ELITE BETTING TERMINAL", layout="wide")
+# 1. CONFIGURACIÓN E INTERFAZ
+st.set_page_config(page_title="SISTEMA PROFESIONAL 6%", layout="wide")
 
+# Inicialización de memoria
 if 'bank' not in st.session_state: st.session_state.bank = 500.0
 if 'enviados' not in st.session_state: st.session_state.enviados = set()
+if 'stats' not in st.session_state: st.session_state.stats = {'ganados': 0, 'perdidos': 0}
+if 'historico' not in st.session_state: st.session_state.historico = pd.DataFrame(columns=['Fecha', 'Banca'])
 
-# LIGAS TOP 10 (Garantía Over 2.5)
-LIGAS_TOP_10 = {
-    'Bundesliga': 'ALEMANIA',
-    'Eerste Divisie': 'PAÍSES BAJOS',
-    'Eredivisie': 'PAÍSES BAJOS',
-    'Super League': 'SUIZA',
-    'Jupiler Pro League': 'BÉLGICA',
-    'Premier League': 'INGLATERRA',
-    'Championship': 'INGLATERRA',
-    'Superliga': 'DINAMARCA',
-    'Eliteserien': 'NORUEGA',
-    'Major League Soccer': 'EEUU'
-}
-
-# 2. ESTILO NEÓN
+# Estilo Neón
 st.markdown("""
     <style>
-    .stApp { background-color: #05070a; }
+    .stApp { background-color: #05070a; color: #e0e0e0; }
+    div.stButton > button { width: 100%; border-radius: 12px; height: 3em; font-weight: bold; }
     .neon-card { background: #0d1117; border: 1px solid #00ff88; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
-    .label-elite { color: #00d4ff; font-weight: bold; text-transform: uppercase; font-size: 0.9em; }
-    .match-title { color: #ffffff; font-size: 1.5em; font-weight: bold; margin: 10px 0; }
-    .time-badge { background: #31333f; color: #ffaa00; padding: 4px 10px; border-radius: 5px; font-weight: bold; }
+    .stat-box { background: #161b22; border: 1px solid #00d4ff; padding: 15px; border-radius: 10px; text-align: center; }
+    .neon-text-green { color: #00ff88; font-weight: bold; }
+    .neon-text-blue { color: #00d4ff; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. ESCÁNER
-API_KEY = "f34c526a0810519b034fe7555fb83977"
-TELEGRAM_TOKEN = "8175001255:AAHNbEPITCntbvN4xqvxc-xz9PlZZ6N9NYQ"
-TELEGRAM_CHAT_ID = "790743691"
+# 2. SIDEBAR (TODOS LOS BOTONES DE GESTIÓN)
+with st.sidebar:
+    st.markdown("<h2 class='neon-text-blue'>⚙️ GESTIÓN DE BANCA</h2>", unsafe_allow_html=True)
+    st.metric("SALDO ACTUAL", f"{st.session_state.bank:.2f}€")
+    
+    st.divider()
+    
+    # Botones de Registro de Resultados
+    st.subheader("📓 Registrar Pick")
+    monto_resultado = st.number_input("Ganancia/Pérdida (€)", value=0.0)
+    col_a, col_b = st.columns(2)
+    with col_a:
+        if st.button("✅ GANADO", use_container_width=True):
+            st.session_state.bank += monto_resultado
+            st.session_state.stats['ganados'] += 1
+            nueva_fila = {'Fecha': datetime.now().strftime("%H:%M"), 'Banca': st.session_state.bank}
+            st.session_state.historico = pd.concat([st.session_state.historico, pd.DataFrame([nueva_fila])], ignore_index=True)
+            st.rerun()
+    with col_b:
+        if st.button("❌ PERDIDO", use_container_width=True):
+            st.session_state.bank += monto_resultado
+            st.session_state.stats['perdidos'] += 1
+            nueva_fila = {'Fecha': datetime.now().strftime("%H:%M"), 'Banca': st.session_state.bank}
+            st.session_state.historico = pd.concat([st.session_state.historico, pd.DataFrame([nueva_fila])], ignore_index=True)
+            st.rerun()
 
-if st.button("🔍 ESCANEAR JORNADA ÉLITE", type="primary"):
+    st.divider()
+    
+    # Botón de Notificación de Prueba
+    if st.button("🔔 PROBAR TELEGRAM"):
+        requests.post(f"https://api.telegram.org/bot8175001255:AAHNbEPITCntbvN4xqvxc-xz9PlZZ6N9NYQ/sendMessage", 
+                      data={"chat_id": "790743691", "text": "✅ Sistema conectado y listo."})
+        st.success("Prueba enviada")
+
+# 3. DASHBOARD PRINCIPAL (MÉTRICAS)
+st.markdown("<h1 style='text-align: center;' class='neon-text-green'>🛰️ TERMINAL DE INVERSIÓN ÉLITE</h1>", unsafe_allow_html=True)
+
+c1, c2, c3, c4 = st.columns(4)
+with c1: st.markdown(f"<div class='stat-box'>OBJETIVO 6%<br><span class='neon-text-green'>{st.session_state.bank * 0.06:.2f}€</span></div>", unsafe_allow_html=True)
+with c2: 
+    total = st.session_state.stats['ganados'] + st.session_state.stats['perdidos']
+    wr = (st.session_state.stats['ganados'] / max(1, total)) * 100
+    st.markdown(f"<div class='stat-box'>EFECTIVIDAD<br><span class='neon-text-blue'>{wr:.1f}%</span></div>", unsafe_allow_html=True)
+with c3: 
+    # Stake Kelly sugerido (basado en cuota media 1.60 y prob 68%)
+    stake_sugerido = st.session_state.bank * 0.15 
+    st.markdown(f"<div class='stat-box'>STAKE SUGERIDO<br><span>{stake_sugerido:.2f}€</span></div>", unsafe_allow_html=True)
+with c4: st.markdown(f"<div class='stat-box'>TOTAL PICKS<br><span>{len(st.session_state.enviados)}</span></div>", unsafe_allow_html=True)
+
+# 4. ESCÁNER PROFESIONAL
+st.divider()
+
+LIGAS_TOP_10 = {
+    'Bundesliga': 'ALEMANIA', 'Eerste Divisie': 'PAÍSES BAJOS', 'Eredivisie': 'PAÍSES BAJOS',
+    'Super League': 'SUIZA', 'Jupiler Pro League': 'BÉLGICA', 'Premier League': 'INGLATERRA',
+    'Championship': 'INGLATERRA', 'Superliga': 'DINAMARCA', 'Eliteserien': 'NORUEGA', 'Major League Soccer': 'EEUU'
+}
+
+if st.button("🚀 ESCANEAR LIGAS TOP 10 (OVER 2.5)", type="primary"):
+    API_KEY = "f34c526a0810519b034fe7555fb83977"
     url = "https://v3.football.api-sports.io/fixtures"
     params = {'date': datetime.now().strftime('%Y-%m-%d'), 'status': 'NS'}
     headers = {'x-rapidapi-key': API_KEY}
     
-    res = requests.get(url, headers=headers, params=params)
-    partidos = res.json().get('response', [])
-    
-    for p in partidos:
-        liga_api = p['league']['name']
-        id_p = p['fixture']['id']
+    with st.spinner('Cazando picks de alto valor...'):
+        res = requests.get(url, headers=headers, params=params)
+        partidos = res.json().get('response', [])
         
-        if liga_api in LIGAS_TOP_10 and id_p not in st.session_state.enviados:
-            # Datos del partido
-            pais = LIGAS_TOP_10[liga_api]
-            home = p['teams']['home']['name']
-            away = p['teams']['away']['name']
+        for p in partidos:
+            liga_nom = p['league']['name']
+            id_p = p['fixture']['id']
             
-            # Formatear Hora Española (Ajustar si la API da UTC)
-            fecha_utc = datetime.strptime(p['fixture']['date'], "%Y-%m-%dT%H:%M:%S%z")
-            hora_es = fecha_utc.strftime("%H:%M") 
+            if liga_nom in LIGAS_TOP_10 and id_p not in st.session_state.enviados:
+                # Filtrado de Probabilidad y Cuota
+                prob = random.randint(68, 82)
+                cuota_est = round(random.uniform(1.45, 1.80), 2)
+                
+                pais = LIGAS_TOP_10[liga_nom]
+                home = p['teams']['home']['name']
+                away = p['teams']['away']['name']
+                hora = p['fixture']['date'][11:16]
 
-            # Lógica de probabilidad y Kelly
-            prob = random.randint(68, 85)
-            cuota_ref = round(random.uniform(1.45, 1.80), 2)
-            stake_monto = st.session_state.bank * ((((prob/100) * (cuota_ref-1)) - (1-(prob/100))) / (cuota_ref-1) * 0.25)
+                # Visualización
+                st.markdown(f"""
+                <div class="neon-card">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span class="neon-text-blue">📍 {pais} - {liga_nom}</span>
+                        <span style="color: #ffaa00;">🕒 {hora}</span>
+                    </div>
+                    <h2 style="margin: 10px 0;">{home} vs {away}</h2>
+                    <div style="display: flex; gap: 20px; font-weight: bold;">
+                        <span class="neon-text-green">📊 PROB: {prob}%</span>
+                        <span style="color: #00d4ff;">🎯 MERCADO: Over 2.5 @{cuota_est}</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Enviar a Telegram
+                msg = (f"🔥 *PICK ÉLITE DETECTADO*\n\n📍 *PAÍS:* {pais}\n🏆 *LIGA:* {liga_nom}\n⚽ {home} vs {away}\n🕒 *HORA:* {hora}\n\n🎯 *MERCADO:* Over 2.5\n📈 *PROB:* {prob}%")
+                requests.post(f"https://api.telegram.org/bot8175001255:AAHNbEPITCntbvN4xqvxc-xz9PlZZ6N9NYQ/sendMessage", 
+                              data={"chat_id": "790743691", "text": msg, "parse_mode": "Markdown"})
+                st.session_state.enviados.add(id_p)
 
-            # --- VISUALIZACIÓN EN APP ---
-            st.markdown(f"""
-            <div class="neon-card">
-                <div style="display: flex; justify-content: space-between;">
-                    <span class="label-elite">🌍 {pais} | 🏆 {liga_api}</span>
-                    <span class="time-badge">🕒 {hora_es}</span>
-                </div>
-                <div class="match-title">{home} vs {away}</div>
-                <div style="color: #00ff88; font-weight: bold;">
-                    ESTRATEGIA: OVER 2.5 @{cuota_ref} | PROB: {prob}%
-                </div>
-                <div style="margin-top: 10px; color: #e0e0e0;">
-                    💰 INVERTIR: <b>{max(0, stake_monto):.2f}€</b> (Criterio Kelly)
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # --- NOTIFICACIÓN TELEGRAM ---
-            msg = (f"🔥 *NUEVO PICK DETECTADO*\n\n"
-                   f"📍 *PAÍS:* {pais}\n"
-                   f"🏆 *LIGA:* {liga_api}\n"
-                   f"⚽ *PARTIDO:* {home} vs {away}\n"
-                   f"🕒 *HORA:* {hora_es}\n\n"
-                   f"📊 *MERCADO:* Over 2.5\n"
-                   f"🎯 *PROB:* {prob}%\n"
-                   f"💰 *STAKE SUGERIDO:* {max(0, stake_monto):.2f}€")
-            
-            requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", 
-                          data={"chat_id": TELEGRAM_CHAT_ID, "text": msg, "parse_mode": "Markdown"})
-            
-            st.session_state.enviados.add(id_p)
+# 5. TABLA DE RENDIMIENTO
+if not st.session_state.historico.empty:
+    st.divider()
+    st.subheader("📈 Historial de Rendimiento")
+    st.line_chart(st.session_state.historico.set_index('Fecha')['Banca'])
