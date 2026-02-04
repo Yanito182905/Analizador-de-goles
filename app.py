@@ -4,105 +4,134 @@ import requests
 import pandas as pd
 from datetime import datetime
 
-# 1. CONFIGURACIÓN Y ESTILO PRO
-st.set_page_config(page_title="Sistema Triple 6% Pro", page_icon="📈", layout="wide")
+# 1. CONFIGURACIÓN Y ESTILO VISUAL (Colores y Botones)
+st.set_page_config(page_title="Sistema Pro 6%", page_icon="🛡️", layout="wide")
 
 st.markdown("""
     <style>
+    /* Estilo General */
     .main { background-color: #0e1117; }
+    
+    /* Botones con Colores Específicos */
+    div.stButton > button { width: 100%; border-radius: 12px; height: 3.5em; font-weight: bold; color: white; border: none; transition: 0.3s; }
+    
+    /* Botón Escanear (VERDE) */
+    .stButton > button[kind="primary"] { background-color: #00ff88 !important; color: black !important; }
+    
+    /* Botón Test (AZUL) */
+    .stButton > button:contains("Notificación") { background-color: #00d4ff !important; }
+    
+    /* Botón Guardar (AMARILLO/NARANJA) */
+    .stButton > button:contains("Guardar") { background-color: #ffaa00 !important; color: black !important; }
+
+    /* Tarjetas de Picks con Colores */
+    .card-15 { border-left: 8px solid #00ff88; background-color: #1c212d; padding: 20px; border-radius: 15px; margin-bottom: 15px; }
+    .card-25 { border-left: 8px solid #ffaa00; background-color: #1c212d; padding: 20px; border-radius: 15px; margin-bottom: 15px; }
+    .card-ht { border-left: 8px solid #00d4ff; background-color: #1c212d; padding: 20px; border-radius: 15px; margin-bottom: 15px; }
+    
     .stMetric { background-color: #1c212d; padding: 15px; border-radius: 15px; border: 1px solid #2e3648; }
-    .card-15 { border-left: 5px solid #00ff88; background-color: #1c212d; padding: 15px; border-radius: 10px; margin-bottom: 10px; }
-    .card-25 { border-left: 5px solid #ffaa00; background-color: #1c212d; padding: 15px; border-radius: 10px; margin-bottom: 10px; }
-    .card-ht { border-left: 5px solid #00d4ff; background-color: #1c212d; padding: 15px; border-radius: 10px; margin-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. CREDENCIALES
+# 2. CREDENCIALES Y VARIABLES DE SESIÓN
 API_KEY = "f34c526a0810519b034fe7555fb83977"
 TELEGRAM_TOKEN = "8175001255:AAHNbEPITCntbvN4xqvxc-xz9PlZZ6N9NYQ"
 TELEGRAM_CHAT_ID = "790743691"
 HEADERS = {'x-rapidapi-host': "v3.football.api-sports.io", 'x-rapidapi-key': API_KEY}
 
-# 3. SESIÓN Y DATOS
-if 'bank_actual' not in st.session_state: st.session_state.bank_actual = 300.0
+if 'bank_actual' not in st.session_state: st.session_state.bank_actual = 600.0
 if 'historico' not in st.session_state: 
     st.session_state.historico = pd.DataFrame(columns=['Fecha', 'Resultado', 'Banca'])
 
-# 4. FUNCIONES DE TELEGRAM
+# 3. FUNCIONES AUXILIARES
 def enviar_telegram(msg):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": msg, "parse_mode": "Markdown"}
     return requests.post(url, data=payload)
 
-# 5. SIDEBAR: CONTROL DE BANCA Y NOTIFICACIONES
+# 4. SIDEBAR: HERRAMIENTAS Y REGISTRO
 with st.sidebar:
-    st.header("⚙️ Configuración")
-    if st.button("🔔 Probar Notificación"):
-        enviar_telegram("✅ ¡Sistema 6% Conectado! Las notificaciones están activas.")
-        st.success("Test enviado a Telegram")
+    st.header("🛠️ Panel Técnico")
     
+    # Botón de Notificación (AZUL)
+    if st.button("🔔 Probar Notificación", use_container_width=True):
+        enviar_telegram("🔵 *SISTEMA CONECTADO*\nEl bot está listo para enviar picks.")
+        st.success("Test enviado")
+
     st.divider()
-    st.header("📓 Registro Diario")
-    monto = st.number_input("Resultado neto ($)", value=0.0, help="Positivo para ganancia, Negativo para pérdida")
-    if st.button("💾 Guardar Jornada"):
+    st.header("📓 Libro de Registro")
+    monto = st.number_input("Resultado de la sesión ($)", value=0.0, help="Usa '-' para pérdidas")
+    
+    # Botón de Guardar (AMARILLO)
+    if st.button("💾 Guardar Datos", use_container_width=True):
         nueva = {'Fecha': datetime.now().strftime("%Y-%m-%d"), 'Resultado': monto, 'Banca': st.session_state.bank_actual + monto}
         st.session_state.historico = pd.concat([st.session_state.historico, pd.DataFrame([nueva])], ignore_index=True)
         st.session_state.bank_actual += monto
         st.rerun()
 
-# 6. DASHBOARD PRINCIPAL
-st.title("💰 Mi Panel de Inversión 6%")
+# 5. DASHBOARD PRINCIPAL (Métricas y Gráfica)
+st.title("💰 Inversión Estratégica 6%")
 meta_hoy = st.session_state.bank_actual * 0.06
 
-col1, col2, col3 = st.columns(3)
-with col1: st.metric("Banca Actual", f"${st.session_state.bank_actual:.2f}")
-with col2: st.metric("Meta de Hoy", f"${meta_hoy:.2f}", "🎯")
-with col3:
-    ganancia_neta = st.session_state.bank_actual - 300.0
-    st.metric("Balance Total", f"${ganancia_neta:.2f}", f"{((ganancia_neta/300)*100):.1f}%")
+c1, c2, c3 = st.columns(3)
+with c1: st.metric("Capital Actual", f"${st.session_state.bank_actual:.2f}")
+with c2: st.metric("Meta del Día (6%)", f"${meta_hoy:.2f}", "🎯")
+with c3:
+    balance_total = st.session_state.bank_actual - 600.0
+    color_delta = "normal" if balance_total >= 0 else "inverse"
+    st.metric("Balance Total", f"${balance_total:.2f}", f"{((balance_total/600)*100):.1f}%", delta_color=color_delta)
 
-# 7. GRÁFICA DE RENTABILIDAD
+# Gráfica de Rentabilidad
 if not st.session_state.historico.empty:
-    st.subheader("📈 Evolución de mi Capital")
+    st.subheader("📈 Curva de Crecimiento")
     st.line_chart(st.session_state.historico.set_index('Fecha')['Banca'])
 else:
-    st.info("La gráfica aparecerá cuando registres tu primer resultado en el panel lateral.")
+    st.info("💡 Aquí aparecerá tu gráfica cuando registres tu primer resultado diario.")
 
-# 8. ESCÁNER DE TRIPLE ESTRATEGIA
+# 6. ESCÁNER ÉLITE (Botón VERDE)
 st.divider()
-if st.button('🚀 ESCANEAR PARTIDOS DE HOY'):
-    url_fixtures = "https://v3.football.api-sports.io/fixtures"
+if st.button('🚀 ESCANEAR MERCADO (FILTRO ÉLITE)', type="primary", use_container_width=True):
+    url = "https://v3.football.api-sports.io/fixtures"
     params = {'date': datetime.now().strftime('%Y-%m-%d'), 'status': 'NS'}
     
-    with st.spinner('Analizando oportunidades de inversión...'):
-        res = requests.get(url_fixtures, headers=HEADERS, params=params)
+    with st.spinner('Filtrando mejores oportunidades...'):
+        res = requests.get(url, headers=HEADERS, params=params)
         partidos = res.json().get('response', [])
         
-        # Filtros de ligas por estrategia
-        ligas_25 = ['Bundesliga', 'Super League', 'Allsvenskan', 'Norwegian Premier League']
+        # Filtros de Ligas Élite
+        ligas_25 = ['Bundesliga', 'Swiss Super League', 'Allsvenskan', 'Norway Eliteserien']
         ligas_ht = ['Eerste Divisie', 'Eredivisie']
         
-        stake = meta_hoy / 0.35 # Cálculo basado en cuota 1.35
-        
+        encontrados = 0
+        stake_rec = meta_hoy / 0.35
+
         for p in partidos:
             liga = p['league']['name']
             home, away = p['teams']['home']['name'], p['teams']['away']['name']
             hora = p['fixture']['date'][11:16]
             
-            # Clasificación inteligente
+            # Clasificación y Visualización
             if liga in ligas_25:
-                est, css, emoj = "OVER 2.5", "card-25", "🔥"
+                est, css, emoj, dot = "OVER 2.5", "card-25", "🔥", "🟠"
             elif liga in ligas_ht:
-                est, css, emoj = "OVER 0.5 HT", "card-ht", "⚡"
+                est, css, emoj, dot = "OVER 0.5 HT", "card-ht", "⚡", "🔵"
             else:
-                est, css, emoj = "OVER 1.5", "card-15", "🛡️"
+                est, css, emoj, dot = "OVER 1.5", "card-15", "🛡️", "🟢"
 
-            # Mostrar en pantalla
-            st.markdown(f"""<div class="{css}">
-                <h4>{emoj} {home} vs {away}</h4>
-                <b>ESTRATEGIA:</b> {est} | 🏆 {liga} | ⏰ {hora}<br>
-                <b>INVERTIR:</b> ${stake:.2f} para ganar ${meta_hoy:.2f}
-            </div>""", unsafe_allow_html=True)
+            # Solo mostrar ligas que conocemos como rentables
+            ligas_todas = ligas_25 + ligas_ht + ['Premier League', 'Serie A', 'J1 League', 'Super Lig']
+            
+            if liga in ligas_todas:
+                encontrados += 1
+                st.markdown(f"""<div class="{css}">
+                    <h4>{emoj} {home} vs {away}</h4>
+                    <b>ESTRATEGIA:</b> {est} | 🏆 {liga} | ⏰ {hora}<br>
+                    <b>INVERTIR:</b> ${stake_rec:.2f} (Para meta de ${meta_hoy:.2f})
+                </div>""", unsafe_allow_html=True)
 
-            # Enviar a Telegram
-            enviar_telegram(f"{emoj} *PICK {est}*\n⚽ {home} vs {away}\n💰 Stake: ${stake:.2f}\n📈 Meta: +${meta_hoy:.2f}")
+                # Enviar a Telegram con círculo de color
+                msg = f"{dot} *PICK ÉLITE*\n⚽ {home} vs {away}\n📊 Mercado: {est}\n💰 Stake: ${stake_rec:.2f}"
+                enviar_telegram(msg)
+        
+        if encontrados == 0:
+            st.warning("Mercado cerrado o sin picks de alta probabilidad ahora mismo.")
