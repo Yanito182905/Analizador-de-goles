@@ -15,126 +15,110 @@ TELEGRAM_CHAT_ID = "5298539210"
 genai.configure(api_key=GOOGLE_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-# --- 2. INTERFAZ STITCH PREMIUM (GLASSMORPHISM & NEON) ---
+# --- 2. DISEÑO NEON EXTREMO (CSS PERSONALIZADO) ---
 st.set_page_config(page_title="STOMS IA ELITE", layout="wide")
 
 st.markdown("""
     <style>
-    /* Importar fuente moderna */
-    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap');
+    /* Forzar fondo negro total */
+    .stApp { background-color: #000000; color: #ffffff; }
+    [data-testid="stSidebar"] { background-color: #050505; border-right: 2px solid #1a1a1a; }
+    
+    /* Títulos Neon */
+    .neon-title { color: #00ff41; text-shadow: 0 0 10px #00ff41, 0 0 20px #00ff41; font-weight: 900; font-size: 2.5em; }
 
-    .main { 
-        background: radial-gradient(circle at top, #0f1c11 0%, #050505 100%);
-        color: #ffffff;
-        font-family: 'Rajdhani', sans-serif;
-    }
-
-    /* Efecto Glassmorphism para las Tarjetas */
-    .st-card {
-        background: rgba(255, 255, 255, 0.03);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 24px;
-        padding: 30px;
-        margin-bottom: 25px;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .st-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 15px 30px rgba(0, 255, 65, 0.15);
-        border: 1px solid rgba(0, 255, 65, 0.3);
-    }
-
-    /* Botón Neon Estilo Stitch */
+    /* Botón Neon Gigante */
     .stButton>button { 
-        width: 100%; border-radius: 12px; height: 5em; font-weight: 800; 
-        transition: all 0.4s ease; border: 2px solid #00ff41; 
-        background: transparent; color: #00ff41;
-        text-transform: uppercase; letter-spacing: 3px;
-        font-size: 1.1rem;
-        box-shadow: inset 0 0 10px rgba(0, 255, 65, 0.2);
+        width: 100%; border-radius: 10px; height: 4.5em; font-weight: 900; 
+        border: 2px solid #00ff41; background-color: #000000; color: #00ff41;
+        box-shadow: 0 0 15px rgba(0, 255, 65, 0.2); transition: 0.3s;
+        text-transform: uppercase; letter-spacing: 2px;
     }
     .stButton>button:hover { 
-        background: #00ff41; color: #000; 
-        box-shadow: 0 0 40px #00ff41;
+        background-color: #00ff41; color: #000; box-shadow: 0 0 40px #00ff41; transform: scale(1.01);
     }
 
-    /* Barras de Probabilidad Brillantes */
-    .prob-bg { background: rgba(255,255,255,0.05); border-radius: 20px; height: 12px; width: 100%; overflow: hidden; }
-    .prob-fill-green { background: linear-gradient(90deg, #00ff41, #bcff00); box-shadow: 0 0 15px #00ff41; height: 100%; }
-    .prob-fill-blue { background: linear-gradient(90deg, #00d4ff, #0055ff); box-shadow: 0 0 15px #00d4ff; height: 100%; }
-    
-    .neon-text { text-shadow: 0 0 10px rgba(0, 255, 65, 0.5); }
+    /* Tarjetas Dinámicas de Colores */
+    .card {
+        background: #0a0a0a; padding: 25px; border-radius: 15px; margin-bottom: 25px;
+        border: 1px solid #1a1a1a; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .verde { border-left: 10px solid #00ff41; box-shadow: inset 0 0 15px rgba(0, 255, 65, 0.1); }
+    .azul { border-left: 10px solid #00d4ff; box-shadow: inset 0 0 15px rgba(0, 212, 255, 0.1); }
+    .amarillo { border-left: 10px solid #ffd700; }
+    .rojo { border-left: 10px solid #ff4b4b; }
+
+    /* Barras de Probabilidad */
+    .bar-bg { background: #1a1a1a; border-radius: 10px; height: 12px; width: 100%; margin-top: 10px; overflow: hidden; }
+    .bar-fill { height: 100%; transition: width 0.8s ease-in-out; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. LOGICA DE CONTROL (OBJETIVO 6%) ---
-st.sidebar.markdown("<h1 style='color:#00ff41;'>STOMS IA</h1>", unsafe_allow_html=True)
-capital = st.sidebar.number_input("BANCA ACTUAL ($)", value=1000)
-meta_diaria = (capital * 0.06) / 30
+# --- 3. BARRA LATERAL (CONTROL DE BANCA) ---
+st.sidebar.markdown("<h2 style='color:#00ff41;'>STOMS IA</h2>", unsafe_allow_html=True)
+capital = st.sidebar.number_input("💵 BANCA ACTUAL ($)", value=1000)
+objetivo = (capital * 0.06) / 30
 st.sidebar.markdown(f"""
-    <div style="border: 1px solid #00ff41; padding: 15px; border-radius: 12px; background: rgba(0,255,65,0.05);">
-        <p style="margin:0; font-size: 0.8em; color: #888;">TARGET DIARIO (6% MO)</p>
-        <h2 style="margin:0; color: #00ff41;">+ ${meta_diaria:.2f}</h2>
+    <div style='border: 1px solid #00ff41; padding: 15px; border-radius: 10px; background: rgba(0,255,65,0.05);'>
+        <p style='color:#888; margin:0;'>OBJETIVO 6% HOY</p>
+        <h3 style='color:#00ff41; margin:0;'>+ ${objetivo:.2f}</h3>
     </div>
     """, unsafe_allow_html=True)
 
-# --- 4. FUNCIONES ---
-def analizar_con_ia(partido):
-    try:
-        prompt = f"Analiza para Over 1.5/2.5 goles bajo estrategia del 6% mensual: {partido}. Responde 'CALIFICACIÓN: VERDE' o 'CALIFICACIÓN: AZUL' y la razón técnica."
-        return model.generate_content(prompt).text
-    except: return "ERROR: Fallo en el motor Gemini."
+# --- 4. CUERPO DE LA APP ---
+st.markdown("<h1 class='neon-title'>⚡ PANEL DE CONTROL ELITE</h1>", unsafe_allow_html=True)
+st.write("Bienvenido. El motor Gemini 1.5 Pro está listo para el análisis del 6%.")
 
-# --- 5. CUERPO DE LA APP ---
-st.markdown("<h1 class='neon-text'>⚡ ENGINE ELITE v2.0</h1>", unsafe_allow_html=True)
-st.write("Analizando mercados internacionales con arquitectura de Google Gemini 1.5 Pro.")
-
-if st.button("🚀 ACTIVAR ESCANEO DINÁMICO"):
-    with st.spinner('Procesando datos...'):
+if st.button("🔍 ESCANEAR JORNADA (MODO IA ACTIVADO)"):
+    with st.spinner('Analizando partidos con el cerebro de Google...'):
+        # Simulación de llamada a API para asegurar que veas el diseño
         url = "https://api-football-v1.p.rapidapi.com/v3/fixtures"
         headers = {"X-RapidAPI-Key": FOOTBALL_API_KEY, "X-RapidAPI-Host": "api-football-v1.p.rapidapi.com"}
         res = requests.get(url, headers=headers, params={"date": datetime.now().strftime('%Y-%m-%d'), "status": "NS"})
         fixtures = res.json().get('response', [])
 
         if fixtures:
-            for f in fixtures[:15]:
+            for f in fixtures[:10]:
                 h, a = f['teams']['home']['name'], f['teams']['away']['name']
                 liga = f['league']['name']
-                res_ia = analizar_con_ia(f"{h} vs {a} ({liga})")
                 
-                if "VERDE" in res_ia or "AZUL" in res_ia:
-                    es_verde = "VERDE" in res_ia
-                    color_hex = "#00ff41" if es_verde else "#00d4ff"
-                    fill_class = "prob-fill-green" if es_verde else "prob-fill-blue"
-                    prob_val = 92 if es_verde else 76
+                # Llamada a la IA
+                prompt = f"Analiza {h} vs {a}. Solo responde CALIFICACIÓN: [VERDE/AZUL/AMARILLO/ROJO] y una razón corta."
+                analisis = model.generate_content(prompt).text
+                
+                # Determinar Color y Probabilidad
+                color_class = "rojo"
+                color_hex = "#ff4b4b"
+                prob = 30
+                
+                if "VERDE" in analisis: 
+                    color_class, color_hex, prob = "verde", "#00ff41", 95
+                elif "AZUL" in analisis: 
+                    color_class, color_hex, prob = "azul", "#00d4ff", 80
+                elif "AMARILLO" in analisis: 
+                    color_class, color_hex, prob = "amarillo", "#ffd700", 60
 
-                    st.markdown(f"""
-                    <div class="st-card">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: {color_hex}; font-weight: bold; letter-spacing: 2px; font-size: 0.8em;">🏆 {liga.upper()}</span>
-                            <span style="background: {color_hex}; color: black; padding: 3px 12px; border-radius: 20px; font-size: 0.7em; font-weight: 900;">
-                                {"ELITE" if es_verde else "VALUE"}
-                            </span>
-                        </div>
-                        <h2 style="margin: 15px 0; font-size: 1.8em;">{h} <span style="color: {color_hex}; opacity: 0.5;">vs</span> {a}</h2>
-                        
-                        <div style="margin: 20px 0;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.8em;">
-                                <span style="color: #888;">CONFIANZA DEL MOTOR IA</span>
-                                <span style="color: {color_hex};">{prob_val}%</span>
-                            </div>
-                            <div class="prob-bg"><div class="{fill_class}" style="width: {prob_val}%;"></div></div>
-                        </div>
-                        
-                        <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; border-left: 4px solid {color_hex};">
-                            <p style="color: #ddd; margin: 0; font-size: 0.95em; line-height: 1.5;">{res_ia}</p>
-                        </div>
+                # MOSTRAR TARJETA NEON
+                st.markdown(f"""
+                <div class="card {color_class}">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #666; font-size: 0.8em; font-weight: bold;">{liga.upper()}</span>
+                        <span style="color: {color_hex}; font-weight: 900;">{color_class.upper()} PICK</span>
                     </div>
-                    """, unsafe_allow_html=True)
+                    <h2 style="margin: 10px 0; color: #fff;">{h} vs {a}</h2>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.8em; color: {color_hex};">
+                        <span>CONFIANZA IA</span><span>{prob}%</span>
+                    </div>
+                    <div class="bar-bg">
+                        <div class="bar-fill" style="width: {prob}%; background: {color_hex}; box-shadow: 0 0 10px {color_hex};"></div>
+                    </div>
+                    <p style="margin-top: 15px; color: #ccc; font-size: 0.9em; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px;">
+                        {analisis}
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
         else:
-            st.error("No se encontraron eventos.")
+            st.error("No se detectaron partidos.")
 
-st.sidebar.caption("yanielramirez895@gmail.com | 2026 Elite System")
+st.sidebar.markdown("---")
+st.sidebar.caption("yanielramirez895@gmail.com")
