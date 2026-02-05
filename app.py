@@ -14,51 +14,80 @@ TELEGRAM_CHAT_ID = "5298539210"
 genai.configure(api_key=GOOGLE_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-# --- 2. INTERFAZ MAESTRA (ESTILO STITCH NEON) ---
+# --- 2. INTERFAZ MAESTRA (DISEÑO STITCH NEON COMPLETO) ---
 st.set_page_config(page_title="STOMS IA ELITE", layout="wide")
 
 st.markdown("""
     <style>
-    .main { background-color: #050505; color: #ffffff; }
+    /* Fondo y Base */
+    .main { background-color: #060606; color: #ffffff; }
     [data-testid="stSidebar"] { background-color: #0a0a0a; border-right: 1px solid #1f1f1f; }
+    
+    /* Títulos y Texto */
+    h1 { color: #00ff41; text-shadow: 0 0 15px rgba(0,255,65,0.3); font-weight: 800; }
+    
+    /* Botón Neon Gigante */
     .stButton>button { 
-        width: 100%; border-radius: 15px; height: 4em; font-weight: 800; 
-        transition: all 0.4s ease; border: 1px solid #00ff41; 
+        width: 100%; border-radius: 15px; height: 5em; font-weight: 900; 
+        transition: all 0.4s ease; border: 2px solid #00ff41; 
         background: rgba(0, 255, 65, 0.05); color: #00ff41;
         text-transform: uppercase; letter-spacing: 2px;
+        margin-top: 20px;
     }
     .stButton>button:hover { 
-        background: #00ff41; color: #000; box-shadow: 0 0 30px rgba(0, 255, 65, 0.4);
+        background: #00ff41; color: #000; 
+        box-shadow: 0 0 40px rgba(0, 255, 65, 0.6);
+        transform: scale(1.01);
     }
+
+    /* Tarjetas de Partidos Estilo Stitch */
     .card-container {
         background: linear-gradient(145deg, #111111, #080808);
-        padding: 30px; border-radius: 24px; border: 1px solid #1f1f1f;
-        margin-bottom: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        padding: 30px; border-radius: 25px; border: 1px solid #222;
+        margin-bottom: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.5);
     }
-    .prob-bar-bg { background: #1f1f1f; border-radius: 10px; height: 10px; width: 100%; margin: 15px 0; overflow: hidden; }
+    
+    .prob-bar-bg { background: #222; border-radius: 20px; height: 12px; width: 100%; margin: 15px 0; overflow: hidden; }
+    .prob-bar-fill { height: 100%; box-shadow: 0 0 15px #00ff41; border-radius: 20px; }
+    
+    .badge {
+        padding: 5px 15px; border-radius: 8px; font-weight: 800; font-size: 0.7em; text-transform: uppercase;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. SIDEBAR ---
-st.sidebar.title("🎯 META 6%")
-cap_actual = st.sidebar.number_input("Capital Actual ($)", value=1000)
-st.sidebar.info(f"Objetivo diario: ${(cap_actual * 0.06 / 30):.2f}")
+# --- 3. BARRA LATERAL (CONTROL DE BANCA 6%) ---
+st.sidebar.markdown("# 🚀 STOMS IA")
+st.sidebar.markdown("---")
+st.sidebar.subheader("📈 Plan de Crecimiento")
+banca = st.sidebar.number_input("Capital en Banca ($)", value=1000)
+objetivo_diario = (banca * 0.06) / 30
+st.sidebar.markdown(f"""
+    <div style="background: rgba(0,255,65,0.1); padding: 15px; border-radius: 10px; border: 1px solid #00ff41;">
+        <p style="color: #00ff41; margin: 0; font-size: 0.8em;">OBJETIVO DIARIO</p>
+        <h2 style="color: #00ff41; margin: 0;">${objetivo_diario:.2f}</h2>
+    </div>
+    """, unsafe_allow_html=True)
+st.sidebar.markdown("---")
+st.sidebar.caption("Usuario: yanielramirez895@gmail.com")
 
 # --- 4. FUNCIONES ---
 def analizar_con_ia(partido):
     try:
-        prompt = f"Analiza para Over 1.5/2.5. Responde: CALIFICACIÓN: [VERDE/AZUL] y razón breve: {partido}"
+        prompt = f"Analiza para Over 1.5/2.5 goles: {partido}. Responde 'CALIFICACIÓN: VERDE' o 'CALIFICACIÓN: AZUL' seguido de una breve razón técnica."
         return model.generate_content(prompt).text
-    except: return "ROJO: Error"
+    except: return "ERROR: Sin conexión"
 
 def enviar_telegram(msg):
     requests.get(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", params={"chat_id": TELEGRAM_CHAT_ID, "text": msg, "parse_mode": "Markdown"})
 
-# --- 5. LÓGICA PRINCIPAL ---
-st.title("⚡ STOMS IA: PANEL ELITE")
+# --- 5. CUERPO DE LA APP ---
+st.title("⚡ PANEL DE CONTROL ELITE")
+st.markdown("Analizando mercados internacionales bajo estrategia de interés compuesto.")
 
-if st.button("🚀 INICIAR ESCANEO DE ALTA PRECISIÓN"):
-    with st.spinner('Escaneando mercados...'):
+# Botón principal con estilo
+if st.button("🔥 ESCANEAR MERCADOS Y ACTIVAR ALERTA"):
+    with st.spinner('IA procesando datos de API-Football...'):
         url = "https://api-football-v1.p.rapidapi.com/v3/fixtures"
         headers = {"X-RapidAPI-Key": FOOTBALL_API_KEY, "X-RapidAPI-Host": "api-football-v1.p.rapidapi.com"}
         res = requests.get(url, headers=headers, params={"date": datetime.now().strftime('%Y-%m-%d'), "status": "NS"})
@@ -69,26 +98,37 @@ if st.button("🚀 INICIAR ESCANEO DE ALTA PRECISIÓN"):
                 h, a = f['teams']['home']['name'], f['teams']['away']['name']
                 liga = f['league']['name']
                 
-                # CORRECCIÓN AQUÍ: Separamos la asignación de la comparación
                 res_ia = analizar_con_ia(f"{h} vs {a} ({liga})")
                 
+                # Filtro de Calidad
                 if "VERDE" in res_ia or "AZUL" in res_ia:
                     color = "#00ff41" if "VERDE" in res_ia else "#00d4ff"
-                    prob = 94 if "VERDE" in res_ia else 79
+                    label = "ELITE PICK" if "VERDE" in res_ia else "VALUE PICK"
+                    prob = 94 if "VERDE" in res_ia else 78
                     
+                    # TARJETA MODERNIZADA
                     st.markdown(f"""
-                    <div class="card-container" style="border-left: 8px solid {color};">
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #888; font-size: 0.8em;">{liga}</span>
-                            <span style="background:{color}; color:black; padding:2px 10px; border-radius:5px; font-weight:bold; font-size:0.7em;">IA PICK</span>
+                    <div class="card-container" style="border-left: 10px solid {color};">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: #666; font-weight: bold; font-size: 0.8em;">🏆 {liga.upper()}</span>
+                            <span class="badge" style="background: {color}; color: black;">{label}</span>
                         </div>
-                        <h2 style="color: white; margin: 10px 0;">{h} vs {a}</h2>
-                        <div class="prob-bar-bg"><div style="width:{prob}%; background:{color}; height:100%;"></div></div>
-                        <div style="background:rgba(255,255,255,0.03); padding:15px; border-radius:10px; color:#ccc;">
-                            {res_ia}
+                        <h2 style="margin: 15px 0; color: white;">{h} <span style="color: {color};">vs</span> {a}</h2>
+                        
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span style="color: {color}; font-size: 0.8em; font-weight: bold;">CONFIANZA DEL SISTEMA</span>
+                            <span style="color: {color}; font-size: 0.8em; font-weight: bold;">{prob}%</span>
+                        </div>
+                        <div class="prob-bar-bg">
+                            <div class="prob-bar-fill" style="width: {prob}%; background: {color};"></div>
+                        </div>
+                        
+                        <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 15px; border: 1px solid #222;">
+                            <p style="color: #ddd; margin: 0; line-height: 1.6;">{res_ia}</p>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
-                    enviar_telegram(f"✅ PICK: {h} vs {a}\n{res_ia}")
+                    
+                    enviar_telegram(f"🚀 *PICK DETECTADO*\n🏟️ {h} vs {a}\n📈 Confianza: {prob}%\n{res_ia}")
         else:
-            st.error("No se encontraron partidos.")
+            st.error("No se detectaron partidos para procesar.")
