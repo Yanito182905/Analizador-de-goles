@@ -1,79 +1,86 @@
-
 import streamlit as st
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # --- CONFIGURACIÓN ---
 TOKEN = "7663240865:AAG7V_6v8XN9Y_fBv-G-4Fq_9t1-G_9F4"
 ID_CANAL = "-5298539210"
 API_KEY = "646398b767msh76718816c52a095p16a309jsn7810459f1345"
 
-st.set_page_config(page_title="STOMS ELITE", layout="wide")
+st.set_page_config(page_title="STOMS ELITE V3", layout="wide")
 
-# --- ESTILO ---
+# --- ESTILO NEON ---
 st.markdown("""
     <style>
     .stApp { background-color: #000; color: #fff; }
-    .neon-card { border: 2px solid #00ff41; padding: 15px; border-radius: 12px; margin-bottom: 10px; background: #050505; }
+    .neon-card { border: 2px solid #00ff41; padding: 20px; border-radius: 15px; margin-bottom: 15px; background: #0a0a0a; box-shadow: 0 0 10px #00ff41; }
+    .stButton>button { width: 100%; border-radius: 10px; font-weight: 900; background: transparent; border: 1px solid #00ff41; color: #00ff41; }
+    .stButton>button:hover { background: #00ff41; color: #000; }
     </style>
     """, unsafe_allow_html=True)
 
-st.sidebar.title("💰 GESTIÓN 6%")
+# --- SIDEBAR ---
+st.sidebar.title("📊 CONTROL DE BANCA")
 banca = st.sidebar.number_input("BANCA ($)", value=600)
-meta = banca * 0.06
+meta_6 = banca * 0.06
+st.sidebar.markdown(f"### OBJETIVO: ${meta_6:.2f}")
 
-# --- MOTOR DE DATOS ---
-st.markdown("<h1 style='color:#00ff41; text-align:center;'>⚡ TERMINAL DE RESCATE</h1>", unsafe_allow_html=True)
+# --- FILTRO DE FECHA ---
+st.markdown("<h1 style='color:#00ff41; text-align:center;'>⚡ ESCÁNER PROFESIONAL STOMS</h1>", unsafe_allow_html=True)
+fecha_busqueda = st.date_input("Selecciona el día para analizar", datetime.now())
 
-if st.button("🚀 INICIAR ESCÁNER DE ALTA VELOCIDAD"):
-    with st.spinner('Extrayendo datos de la jornada...'):
-        # 1. Intentamos conectar con la API
+# --- LÓGICA DE API ---
+if st.button("🔍 BUSCAR PARTIDOS REALES"):
+    with st.spinner('Conectando con la API central...'):
         url = "https://api-football-v1.p.rapidapi.com/v3/fixtures"
-        headers = {"X-RapidAPI-Key": API_KEY, "X-RapidAPI-Host": "api-football-v1.p.rapidapi.com"}
-        hoy = datetime.now().strftime('%Y-%m-%d')
+        headers = {
+            "X-RapidAPI-Key": API_KEY,
+            "X-RapidAPI-Host": "api-football-v1.p.rapidapi.com"
+        }
+        querystring = {"date": fecha_busqueda.strftime('%Y-%m-%d')}
         
         try:
-            res = requests.get(url, headers=headers, params={"date": hoy, "status": "NS"}, timeout=10)
-            fixtures = res.json().get('response', [])
-        except:
-            fixtures = []
-
-        # 2. Si la API falla o no hay partidos, usamos "MODO SEGURO" (Partidos Top del día)
-        if not fixtures:
-            st.warning("⚠️ API saturada. Activando Modo Seguro con partidos principales...")
-            # Creamos partidos manuales basados en la jornada real para que no te quedes sin nada
-            fixtures = [
-                {'teams': {'home': {'name': 'Real Madrid'}, 'away': {'name': 'Atlético Madrid'}}, 'league': {'name': 'La Liga'}, 'fixture': {'date': '20:00'}},
-                {'teams': {'home': {'name': 'Man. City'}, 'away': {'name': 'Liverpool'}}, 'league': {'name': 'Premier League'}, 'fixture': {'date': '18:30'}},
-                {'teams': {'home': {'name': 'Bayern Munich'}, 'away': {'name': 'Dortmund'}}, 'league': {'name': 'Bundesliga'}, 'fixture': {'date': '15:30'}}
-            ]
-
-        # 3. Mostrar Resultados
-        st.write(f"✅ Analizando **{len(fixtures)}** oportunidades potenciales...")
-        
-        for f in fixtures[:15]:
-            # Extraer nombres (manejo de errores si la estructura cambia)
-            try:
-                h = f['teams']['home']['name']
-                a = f['teams']['away']['name']
-                liga = f['league']['name']
-                hora = f['fixture'].get('date', 'Hoy')[11:16] if 'T' in str(f['fixture'].get('date')) else 'Hoy'
-            except:
-                continue
-
-            st.markdown(f"""
-                <div class="neon-card">
-                    <small style="color:#888;">{liga} | {hora}</small>
-                    <h3 style="margin:5px 0;">{h} vs {a}</h3>
-                    <p style="color:#00ff41; font-weight:bold; margin:0;">MERCADO: OVER 1.5 | STAKE: ${(meta*0.4):.2f}</p>
-                </div>
-            """, unsafe_allow_html=True)
-
-            if st.button(f"📲 NOTIFICAR: {h}", key=f"btn_{h}"):
-                msg = f"⚽ *SEÑAL STOMS*\n🏟️ {h} vs {a}\n🏆 {liga}\n💰 *STAKE: ${(meta*0.4):.2f}*\n🎯 Mercado: Over 1.5"
-                # Intentar envío
-                r = requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={"chat_id": ID_CANAL, "text": msg, "parse_mode": "Markdown"})
-                if r.status_code == 200:
-                    st.toast("¡Señal enviada a Telegram! ✅")
+            response = requests.get(url, headers=headers, params=querystring, timeout=15)
+            data = response.json()
+            
+            # Verificación de errores de la API
+            if response.status_code != 200:
+                st.error(f"Error de Servidor: {response.status_code}")
+            elif 'errors' in data and data['errors']:
+                st.error(f"Error de API: {data['errors']}")
+            else:
+                partidos = data.get('response', [])
+                
+                if not partidos:
+                    st.warning(f"No se encontraron partidos para la fecha {fecha_busqueda}. Intenta con el día de mañana.")
                 else:
-                    st.error(f"Error Telegram: {r.json().get('description')}")
+                    st.success(f"✅ ¡Éxito! {len(partidos)} partidos encontrados.")
+                    
+                    for f in partidos[:15]:
+                        h = f['teams']['home']['name']
+                        a = f['teams']['away']['name']
+                        liga = f['league']['name']
+                        hora = f['fixture']['date'][11:16]
+                        
+                        stake = (meta_6 * 0.40) / 0.5
+
+                        st.markdown(f"""
+                        <div class="neon-card">
+                            <div style="display: flex; justify-content: space-between; color: #888;">
+                                <span>{liga}</span><span>{hora}</span>
+                            </div>
+                            <h2 style="margin:10px 0;">{h} vs {a}</h2>
+                            <p style="color:#00ff41; font-weight:bold;">MERCADO: OVER 1.5 | STAKE: ${stake:.2f}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        if st.button(f"ENVIAR SEÑAL: {h}", key=f"btn_{h}"):
+                            msg = f"⚽ SEÑAL: {h} vs {a}\n🏆 {liga}\n💰 Stake: ${stake:.2f}\n🎯 Over 1.5"
+                            r = requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={"chat_id": ID_CANAL, "text": msg})
+                            if r.status_code == 200:
+                                st.toast("Señal enviada!")
+                            else:
+                                st.error("Fallo Telegram. ¿Hiciste al bot ADMIN?")
+                                
+        except Exception as e:
+            st.error(f"Error de conexión: {e}")
