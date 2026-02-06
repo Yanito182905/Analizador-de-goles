@@ -1,89 +1,87 @@
 import streamlit as st
-import pandas as pd
 import requests
-import google.generativeai as genai
 from datetime import datetime
 
-# --- 1. CONFIGURACIÓN DE SEGURIDAD (ID ACTUALIZADO) ---
-GOOGLE_API_KEY = "AIzaSyAIDAx_6DD0nSY6hv4aZ4RKsvw-xjy0bYw"
-FOOTBALL_API_KEY = "646398b767msh76718816c52a095p16a309jsn7810459f1345"
-# Revisa que este Token sea el correcto en tu BotFather
-TELEGRAM_TOKEN = "7663240865:AAG7V_6v8XN9Y_fBv-G-4Fq_9t1-G_9F4"
-TELEGRAM_CHAT_ID = "-5298539210" 
+# --- CONFIGURACIÓN ---
+TOKEN = "7663240865:AAG7V_6v8XN9Y_fBv-G-4Fq_9t1-G_9F4"
+ID_CANAL = "-5298539210"
 
-genai.configure(api_key=GOOGLE_API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
-
-def enviar_telegram(mensaje):
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "Markdown"}
-    try:
-        r = requests.post(url, json=payload, timeout=10)
-        return r.json()
-    except Exception as e:
-        return {"ok": False, "description": str(e)}
-
-# --- 2. DISEÑO NEON EXTREMO ---
 st.set_page_config(page_title="STOMS ULTRA ELITE", layout="wide")
+
+# --- DISEÑO NEON ---
 st.markdown("""
     <style>
     .stApp { background-color: #000; color: #fff; }
-    .neon-card { border: 1px solid #00ff41; padding: 20px; border-radius: 15px; margin-bottom: 10px; background: #050505; }
-    .neon-title { color: #00ff41; text-shadow: 0 0 15px #00ff41; text-align: center; font-weight: 900; }
-    div.stButton > button { width: 100%; border-radius: 10px; height: 3.5em; font-weight: 900; }
+    .neon-card { 
+        border: 2px solid #00ff41; padding: 20px; border-radius: 15px; 
+        margin-bottom: 15px; background: #050505;
+        box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+    }
+    .stButton>button { width: 100%; border-radius: 10px; font-weight: 900; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. SIDEBAR ---
-st.sidebar.markdown("<h1 style='color:#00ff41;'>STOMS IA</h1>", unsafe_allow_html=True)
-banca = st.sidebar.number_input("💵 BANCA ACTUAL ($)", value=600)
-meta_6 = banca * 0.06
+# --- SIDEBAR ---
+st.sidebar.title("💰 GESTIÓN 6%")
+banca = st.sidebar.number_input("BANCA ($)", value=600)
+meta_diaria = banca * 0.06
+st.sidebar.success(f"OBJETIVO HOY: ${meta_diaria:.2f}")
 
-if st.sidebar.button("🔔 PROBAR CONEXIÓN TELEGRAM"):
-    res = enviar_telegram("✅ Test de Conexión STOMS - Canal Detectado")
-    if res.get("ok"):
-        st.sidebar.success("¡Conexión Exitosa!")
+st.sidebar.markdown("---")
+st.sidebar.write("⚙️ **ESTADO TELEGRAM**")
+if st.sidebar.button("🔔 PROBAR ENVÍO"):
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    res = requests.post(url, json={"chat_id": ID_CANAL, "text": "🚀 Test STOMS IA"})
+    if res.status_code == 200:
+        st.sidebar.success("¡CONECTADO!")
     else:
-        st.sidebar.error(f"Error {res.get('error_code')}: {res.get('description')}")
-        st.sidebar.warning("RECUERDA: Debes añadir al bot al grupo/canal y hacerlo ADMIN.")
+        st.sidebar.error("Desconectado (Haz al bot ADMIN)")
 
-# --- 4. CUERPO PRINCIPAL ---
-st.markdown("<h1 class='neon-title'>⚡ TERMINAL ULTRA ELITE</h1>", unsafe_allow_html=True)
+# --- PANEL PRINCIPAL ---
+st.markdown("<h1 style='color:#00ff41; text-align:center;'>⚡ TERMINAL ULTRA ELITE</h1>", unsafe_allow_html=True)
 
-if st.button("🚀 ESCANEAR PARTIDOS DE HOY"):
-    with st.spinner('Accediendo a la API de Fútbol...'):
-        url = "https://api-football-v1.p.rapidapi.com/v3/fixtures"
-        headers = {"X-RapidAPI-Key": FOOTBALL_API_KEY, "X-RapidAPI-Host": "api-football-v1.p.rapidapi.com"}
+if st.button("🚀 BUSCAR PARTIDOS DE HOY"):
+    with st.spinner('Escaneando jornada...'):
+        # API DE FUTBOL
+        headers = {
+            "X-RapidAPI-Key": "646398b767msh76718816c52a095p16a309jsn7810459f1345",
+            "X-RapidAPI-Host": "api-football-v1.p.rapidapi.com"
+        }
         hoy = datetime.now().strftime('%Y-%m-%d')
+        # Buscamos partidos de hoy
+        res = requests.get("https://api-football-v1.p.rapidapi.com/v3/fixtures", headers=headers, params={"date": hoy})
         
-        try:
-            res_api = requests.get(url, headers=headers, params={"date": hoy}, timeout=15)
-            data = res_api.json()
-            fixtures = data.get('response', [])
-        except:
-            fixtures = []
-            st.error("Error de conexión con el servidor de deportes.")
+        data = res.json()
+        partidos = data.get('response', [])
 
-        if fixtures:
-            st.success(f"Se detectaron {len(fixtures)} partidos hoy.")
-            for f in fixtures[:15]:
-                h, a = f['teams']['home']['name'], f['teams']['away']['name']
-                liga = f['league']['name']
-                hora = f['fixture']['date'][11:16]
-                stake = (meta_6 * 0.35) / 0.5
+        if partidos:
+            st.write(f"✅ Se han encontrado **{len(partidos)}** partidos.")
+            for p in partidos[:15]: # Mostramos los primeros 15
+                h = p['teams']['home']['name']
+                a = p['teams']['away']['name']
+                liga = p['league']['name']
+                pais = p['league']['country']
+                hora = p['fixture']['date'][11:16]
+                
+                # Cálculo de Stake
+                stake = (meta_diaria * 0.40) / 0.5
 
+                # TARJETA VISUAL
                 st.markdown(f"""
                 <div class="neon-card">
-                    <small style="color:#888;">{liga} | {hora}</small>
-                    <h3>{h} vs {a}</h3>
-                    <p style="color:#00ff41;">Mercado: Over 1.5 | <b>Stake Sugerido: ${stake:.2f}</b></p>
+                    <div style="display: flex; justify-content: space-between; color: #888;">
+                        <span>{pais} | {liga}</span><span>{hora}</span>
+                    </div>
+                    <h2 style="margin:10px 0; color: #fff;">{h} vs {a}</h2>
+                    <p style="color:#ffd700; font-weight:bold; margin:0;">MERCADO: OVER 1.5</p>
+                    <p style="color:#00ff41; font-weight:bold; margin:0;">STAKE RECOMENDADO: ${stake:.2f}</p>
                 </div>
                 """, unsafe_allow_html=True)
                 
+                # Botón de envío (aunque Telegram falle, esto no romperá la app)
                 if st.button(f"ENVIAR SEÑAL: {h}", key=f"btn_{h}"):
-                    txt = f"⚽ *SEÑAL STOMS*\n🏟️ {h} vs {a}\n🏆 {liga}\n💰 *STAKE: ${stake:.2f}*\n🎯 Mercado: Over 1.5"
-                    res_tel = enviar_telegram(txt)
-                    if res_tel.get("ok"): st.toast("¡Señal en Telegram!")
-                    else: st.error(f"Error: {res_tel.get('description')}")
+                    msg = f"⚽ SEÑAL: {h} vs {a}\n🏆 {liga}\n💰 Stake: ${stake:.2f}\n🎯 Over 1.5"
+                    requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={"chat_id": ID_CANAL, "text": msg})
+                    st.toast(f"Intento de envío para {h} realizado")
         else:
-            st.warning("No se recibieron partidos. Verifica si tu API Key de RapidAPI sigue activa.")
+            st.warning("No se encontraron partidos. Revisa tu conexión o intenta más tarde.")
