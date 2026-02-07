@@ -1,87 +1,88 @@
 import streamlit as st
 import requests
 
-# --- TUS DATOS ---
-API_TOKEN = "c5992c3e7e074dc5b8e9bea0f6abaf88"
+# --- TUS CREDENCIALES ---
 TOKEN_BOT = "7663240865:AAG7V_6v8XN9Y_fBv-G-4Fq_9t1-G_9F4"
 ID_CANAL = "-5298539210"
 
-# --- CONFIGURACIÓN ---
-st.set_page_config(page_title="STOMS ALPHA PRO", layout="wide")
+st.set_page_config(page_title="STOMS OPERATOR PRO", layout="wide")
 
+# Diseño Elite
 st.markdown("""
     <style>
-    .stApp { background-color: #000; color: #fff; }
-    .neon-card { border: 1px solid #00ff41; padding: 20px; border-radius: 15px; background: #0a0a0a; margin-bottom: 15px; box-shadow: 0 0 10px #00ff41; }
-    .stButton>button { width: 100%; border-radius: 10px; font-weight: 900; background: transparent; border: 1px solid #00ff41; color: #00ff41; }
-    .stButton>button:hover { background: #00ff41; color: #000; }
+    .stApp { background-color: #050505; color: #ffffff; }
+    .stTextInput>div>div>input, .stNumberInput>div>div>input {
+        background-color: #1a1a1a !important; color: #00ff41 !important; border: 1px solid #00ff41 !important;
+    }
+    .stButton>button {
+        width: 100%; background: #00ff41 !important; color: #000 !important; font-weight: bold; border-radius: 10px; height: 3em;
+    }
+    .header-box { border: 2px solid #00ff41; padding: 20px; border-radius: 15px; text-align: center; background: #000; margin-bottom: 25px; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- SIDEBAR 6% ---
-st.sidebar.title("📈 ESTRATEGIA STOMS")
-banca = st.sidebar.number_input("BANCA ($)", value=600)
-meta_6 = banca * 0.06
-st.sidebar.success(f"OBJETIVO HOY: ${meta_6:.2f}")
+# --- ESTRATEGIA 6% ---
+st.sidebar.title("📊 GESTIÓN DE RIESGO")
+banca = st.sidebar.number_input("BANCA TOTAL ($)", value=600)
+meta_diaria = banca * 0.06
 
-st.title("⚡ ESCÁNER DE FÚTBOL REAL")
+st.sidebar.markdown(f"""
+    <div style='background:#1a1a1a; padding:15px; border-radius:10px; border: 1px solid #ffd700;'>
+        <p style='margin:0; color:#888;'>OBJETIVO HOY</p>
+        <h2 style='margin:0; color:#ffd700;'>${meta_diaria:.2f}</h2>
+    </div>
+""", unsafe_allow_html=True)
 
-# --- FUNCIÓN TELEGRAM ---
-def enviar_alerta(txt):
-    url = f"https://api.telegram.org/bot{TOKEN_BOT}/sendMessage"
-    requests.post(url, json={"chat_id": ID_CANAL, "text": txt, "parse_mode": "Markdown"})
+# --- CUERPO ---
+st.markdown('<div class="header-box"><h1>⚡ PANEL DE SEÑALES STOMS</h1><p>Introduce el partido manualmente para calcular el Stake exacto</p></div>', unsafe_allow_html=True)
 
-# --- LÓGICA DE DATOS ---
-if st.button("🔍 CARGAR PARTIDOS DE HOY"):
-    # Usamos el endpoint de partidos del día (Today)
-    url = "https://api.football-data.org/v2/matches"
-    headers = {"X-Auth-Token": API_TOKEN}
-    
-    try:
-        response = requests.get(url, headers=headers)
+col1, col2 = st.columns(2)
+
+with col1:
+    local = st.text_input("🏠 EQUIPO LOCAL", placeholder="Ej: Real Madrid")
+    visita = st.text_input("🚀 EQUIPO VISITANTE", placeholder="Ej: Getafe")
+
+with col2:
+    liga = st.text_input("🏆 LIGA", placeholder="Ej: La Liga")
+    cuota = st.number_input("📈 CUOTA OVER 1.5", value=1.40, step=0.01)
+
+# LÓGICA DE STAKE INTELIGENTE
+# Buscamos ganar el 33% de la meta diaria en esta entrada (necesitas 3 aciertos para el 6%)
+ganancia_buscada = meta_diaria / 3
+stake_necesario = ganancia_buscada / (cuota - 1)
+
+st.markdown(f"""
+    <div style="background:#111; padding:20px; border-radius:15px; border-left: 10px solid #00ff41; margin: 20px 0;">
+        <p style="margin:0; color:#888;">ANÁLISIS DE ENTRADA</p>
+        <h2 style="margin:0;">{local} vs {visita}</h2>
+        <h1 style="color:#00ff41;">STAKE SUGERIDO: ${stake_necesario:.2f}</h1>
+        <small style="color:#ffd700;">Con este stake buscas una ganancia de ${ganancia_buscada:.2f}</small>
+    </div>
+""", unsafe_allow_html=True)
+
+if st.button("🚀 ENVIAR ALERTA A TELEGRAM"):
+    if local and visita:
+        msg = (
+            f"⚽ *NUEVA SEÑAL STOMS*\n\n"
+            f"🏟️ *Partido:* {local} vs {visita}\n"
+            f"🏆 *Liga:* {liga}\n"
+            f"🎯 *Mercado:* Over 1.5 Goles\n"
+            f"💰 *Stake:* ${stake_necesario:.2f}\n"
+            f"📉 *Cuota:* {cuota}\n\n"
+            f"📈 *Estrategia:* Crecimiento 6% Diario"
+        )
         
-        if response.status_code == 200:
-            data = response.json()
-            matches = data.get('matches', [])
-            
-            if not matches:
-                st.info("No hay partidos en curso o programados ahora mismo en las ligas soportadas.")
+        try:
+            url = f"https://api.telegram.org/bot{TOKEN_BOT}/sendMessage"
+            r = requests.post(url, json={"chat_id": ID_CANAL, "text": msg, "parse_mode": "Markdown"})
+            if r.status_code == 200:
+                st.success("✅ ¡Señal enviada al canal!")
             else:
-                st.success(f"✅ Conectado. Mostrando {len(matches)} partidos.")
-                
-                for m in matches:
-                    home = m['homeTeam']['name']
-                    away = m['awayTeam']['name']
-                    liga = m['competition']['name']
-                    status = m['status']
-                    
-                    # Stake calculado para tu meta de 6%
-                    stake = (meta_6 * 0.35) / 0.5 
-                    
-                    st.markdown(f"""
-                    <div class="neon-card">
-                        <small style="color:#888;">{liga} | Status: {status}</small>
-                        <h2>{home} vs {away}</h2>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color:#00ff41; font-weight:bold;">MERCADO: OVER 1.5</span>
-                            <span style="color:#ffd700; font-weight:bold;">STAKE: ${stake:.2f}</span>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                    if st.button(f"📲 NOTIFICAR: {home}", key=f"{home}_{m['id']}"):
-                        mensaje = f"⚽ *SEÑAL STOMS*\n🏟️ {home} vs {away}\n🏆 {liga}\n🎯 Mercado: Over 1.5\n💰 *Stake: ${stake:.2f}*"
-                        enviar_alerta(mensaje)
-                        st.toast("Enviado al canal")
-                        
-        elif response.status_code == 403:
-            st.error("🚫 Error 403 persistente.")
-            st.info("Tu Token es correcto, pero es posible que el plan gratuito necesite unas horas para activarse tras confirmar el email. Intentemos de nuevo en un momento.")
-        else:
-            st.error(f"Error {response.status_code}: {response.text}")
-
-    except Exception as e:
-        st.error(f"Error de conexión: {e}")
+                st.error("Error al enviar. Revisa el Token del Bot.")
+        except:
+            st.error("Fallo de conexión con Telegram.")
+    else:
+        st.error("Por favor, rellena los equipos.")
 
 st.markdown("---")
-st.caption("STOMS Terminal - Trabajando con tu meta de crecimiento del 6%.")
+st.caption("Modo Manual Activo | Evitando bloqueos de API externa.")
