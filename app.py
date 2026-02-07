@@ -1,72 +1,96 @@
-
 import streamlit as st
 import requests
-import pandas as pd
-from datetime import datetime
 
-# --- TUS CREDENCIALES DE TELEGRAM ---
-TOKEN_BOT = "7663240865:AAG7V_6v8XN9Y_fBv-G-4Fq_9t1-G_9F4"
-ID_CANAL = "-5298539210"
+# --- TUS CREDENCIALES ACTUALIZADAS ---
+API_TOKEN = "c5992c3e7e074dc5b8e9bea0f6abaf88"
+TELEGRAM_TOKEN = "7663240865:AAG7V_6v8XN9Y_fBv-G-4Fq_9t1-G_9F4"
+CHAT_ID = "-5298539210"
 
-st.set_page_config(page_title="STOMS ALPHA V5", layout="wide")
+st.set_page_config(page_title="STOMS PRO SCANNER", layout="wide")
 
-# Estilo Neón
+# --- ESTILO NEÓN ---
 st.markdown("""
     <style>
-    .stApp { background-color: #000; color: #fff; }
-    .card { border: 2px solid #00ff41; padding: 20px; border-radius: 15px; background: #050505; margin-bottom: 15px; }
-    .stButton>button { width: 100%; border-radius: 10px; font-weight: 900; background: transparent; border: 1px solid #00ff41; color: #00ff41; }
+    .stApp { background-color: #0d1117; color: #ffffff; }
+    .card { 
+        border: 2px solid #00ff41; padding: 25px; border-radius: 15px; 
+        background: #161b22; margin-bottom: 20px;
+        box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
+    }
+    .stButton>button { width: 100%; border-radius: 10px; font-weight: 900; background: transparent; border: 1px solid #00ff41; color: #00ff41; height: 3.5em; }
+    .stButton>button:hover { background: #00ff41 !important; color: #000 !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# Gestión de Banca
-st.sidebar.title("💰 BANCA STOMS")
-banca = st.sidebar.number_input("Capital Actual ($)", value=600)
+# --- SIDEBAR: GESTIÓN 6% ---
+st.sidebar.title("💰 CONTROL DE BANCA")
+banca = st.sidebar.number_input("BANCA ACTUAL ($)", value=600)
 meta_6 = banca * 0.06
-st.sidebar.success(f"META HOY (6%): ${meta_6:.2f}")
+st.sidebar.markdown(f"""
+    <div style='border:1px solid #ffd700; padding:15px; text-align:center; border-radius:10px;'>
+        <span style='color:#ffd700;'>OBJETIVO DIARIO</span><br>
+        <b style='font-size:1.8em; color:#ffd700;'>${meta_6:.2f}</b>
+    </div>
+""", unsafe_allow_html=True)
 
-st.title("⚡ ESCÁNER DE FÚTBOL REAL")
+# --- PANEL PRINCIPAL ---
+st.title("⚡ ESCÁNER REAL-TIME STOMS")
+st.write("Conectado mediante Football-Data API (Direct)")
 
-# --- MOTOR DE DATOS LIBRE (SIN API KEY) ---
-if st.button("🚀 CARGAR PARTIDOS EN VIVO"):
-    with st.spinner('Conectando con el servidor de resultados...'):
+if st.button("🔍 ESCANEAR PARTIDOS DE HOY"):
+    with st.spinner('Obteniendo partidos de las Ligas Top...'):
+        # Endpoint para partidos programados (Scheduled)
+        url = "https://api.football-data.org/v2/matches"
+        headers = {"X-Auth-Token": API_TOKEN}
+        
         try:
-            # Usamos una fuente de datos JSON libre que no requiere registro
-            # Esta URL es un ejemplo de cómo obtener datos de la Premier y Ligas Top
-            url = "https://raw.githubusercontent.com/openfootball/world-cup/master/2022/cups.json" 
+            response = requests.get(url, headers=headers, timeout=15)
             
-            # Como la API de RapidAPI falló, aquí te presento la cartelera REAL 
-            # de los partidos que se están disputando o están por empezar HOY SÁBADO:
-            jornada_real = [
-                {"liga": "LALIGA", "home": "Getafe", "away": "Real Madrid", "hora": "21:00"},
-                {"liga": "LALIGA", "home": "Villarreal", "away": "Valencia", "hora": "16:15"},
-                {"liga": "PREMIER LEAGUE", "home": "Manchester City", "away": "Everton", "hora": "13:30"},
-                {"liga": "PREMIER LEAGUE", "home": "Tottenham", "away": "Brighton", "hora": "16:00"},
-                {"liga": "BUNDESLIGA", "home": "Leverkusen", "away": "Bayern Munich", "hora": "18:30"},
-                {"liga": "SERIE A", "home": "Roma", "away": "Inter", "hora": "18:00"}
-            ]
+            if response.status_code == 200:
+                data = response.json()
+                matches = data.get('matches', [])
+                
+                if not matches:
+                    st.warning("No hay partidos de las ligas principales programados para las próximas horas.")
+                else:
+                    st.success(f"Se han encontrado {len(matches)} partidos disponibles.")
+                    
+                    for m in matches[:15]: # Mostramos los primeros 15
+                        h = m['homeTeam']['name']
+                        a = m['awayTeam']['name']
+                        liga = m['competition']['name']
+                        hora = m['utcDate'][11:16]
+                        
+                        # Cálculo de Stake para tu meta de $36 (6% de 600)
+                        # Buscamos ganar aprox. $12 por partido (1/3 de la meta)
+                        stake = (meta_6 * 0.35) / 0.5 
 
-            for partido in jornada_real:
-                # Calculamos el stake basado en tu meta de $36 (6% de 600)
-                # Arriesgamos el 40% de la meta por operación
-                stake_calc = (meta_6 * 0.40) / 0.5 
+                        st.markdown(f"""
+                        <div class="card">
+                            <div style="display: flex; justify-content: space-between; color: #8b949e; font-size: 0.9em;">
+                                <span>🏆 {liga}</span><span>⏰ {hora} UTC</span>
+                            </div>
+                            <h2 style="margin:15px 0; color:#fff;">{h} vs {a}</h2>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color:#00ff41; font-weight:bold; font-size:1.1em;">🎯 OVER 1.5 GOLES</span>
+                                <span style="color:#ffd700; font-weight:bold; font-size:1.2em;">STAKE: ${stake:.2f}</span>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
 
-                st.markdown(f"""
-                <div class="card">
-                    <div style="display: flex; justify-content: space-between; color: #888;">
-                        <span>🏆 {partido['liga']}</span><span>⏰ {partido['hora']}</span>
-                    </div>
-                    <h2 style="margin:10px 0;">{partido['home']} vs {partido['away']}</h2>
-                    <p style="color:#00ff41; font-weight:bold;">PRONÓSTICO: OVER 1.5 | STAKE: ${stake_calc:.2f}</p>
-                </div>
-                """, unsafe_allow_html=True)
-
-                if st.button(f"📲 ENVIAR SEÑAL: {partido['home']}", key=partido['home']):
-                    txt = f"⚽ *SEÑAL STOMS*\n🏟️ {partido['home']} vs {partido['away']}\n🏆 {partido['liga']}\n🎯 Mercado: Over 1.5\n💰 *Stake: ${stake_calc:.2f}*"
-                    requests.post(f"https://api.telegram.org/bot{TOKEN_BOT}/sendMessage", json={"chat_id": ID_CANAL, "text": txt, "parse_mode": "Markdown"})
-                    st.toast("Señal enviada!")
-
+                        if st.button(f"📲 NOTIFICAR: {h}", key=f"btn_{h}"):
+                            msg = f"⚽ *SEÑAL STOMS*\n🏟️ {h} vs {a}\n🏆 {liga}\n🎯 Mercado: Over 1.5\n💰 *Stake: ${stake:.2f}*"
+                            r = requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", 
+                                             json={"chat_id": CHAT_ID, "text": msg, "parse_mode": "Markdown"})
+                            if r.status_code == 200:
+                                st.toast(f"¡Señal de {h} enviada!")
+                            else:
+                                st.error("Error al enviar a Telegram.")
+            else:
+                st.error(f"Error de API: {response.status_code}. Revisa si la Token es correcta.")
+                
         except Exception as e:
-            st.error(f"Fallo al conectar: {e}")
+            st.error(f"Fallo de conexión: {e}")
 
-st.info("Hoy es Sábado 7 de febrero. Estos son los partidos clave para tu estrategia.")
+st.markdown("---")
+st.caption("STOMS IA v6.0 - Sistema de Crecimiento Acelerado (6%)")
